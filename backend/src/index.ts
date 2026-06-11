@@ -16,10 +16,11 @@ import publicRoutes from './routes/publicRoutes.js';
 const app = express();
 const PORT = process.env['PORT'] ?? 3001;
 
-// Allow both your local machine and your future Vercel live production domain
+// Allow both your local machine and your Vercel live production domain explicitly
 const allowedOrigins = [
   process.env['FRONTEND_URL'],
-  'http://localhost:5173'
+  'http://localhost:5173',
+  'https://steakz-restaurant-system.vercel.app'
 ].filter(Boolean) as string[];
 
 app.use(cors({
