@@ -1,8 +1,10 @@
 import axios from 'axios';
 
-// Prefix with /api because backend mounts routes under /api
+// Use environment-provided backend URL in production, with a safe fallback.
+const API_BASE = (import.meta.env.VITE_API_URL as string) ?? 'https://steakz-restaurant-system.onrender.com/api';
+
 export const api = axios.create({
-  baseURL: 'https://steakz-api-kz10.onrender.com/api', // 👈 Added /api to the end here
+  baseURL: API_BASE,
   headers: {
     'Content-Type': 'application/json',
   },
