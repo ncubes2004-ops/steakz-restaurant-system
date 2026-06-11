@@ -17,21 +17,37 @@ const app = express();
 const PORT = process.env['PORT'] ?? 3001;
 
 // Allow both your local machine and your Vercel live production domain explicitly
+// Normalize any configured FRONTEND_URL by trimming a trailing slash.
 const allowedOrigins = [
-  process.env['FRONTEND_URL'],
+  process.env['FRONTEND_URL'] ? process.env['FRONTEND_URL'].replace(/\/$/, '') : undefined,
   'http://localhost:5173',
   'https://steakz-restaurant-system.vercel.app'
 ].filter(Boolean) as string[];
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Blocked by CORS policy'));
+    try {
+      // For non-browser requests or same-origin requests, origin can be undefined.
+      if (!origin) return callback(null, true);
+
+      // Normalize request origin to avoid failures due to trailing slash differences.
+      const requestOrigin = origin.replace(/\/$/, '');
+
+      if (allowedOrigins.includes(requestOrigin)) {
+        return callback(null, true);
+      }
+
+      // Do not pass an Error object to the callback — that will trigger a 500.
+      // Instead, deny CORS by returning allow=false so the request fails with a CORS policy client-side.
+      console.warn(`[CORS] Denied origin: ${requestOrigin}`);
+      return callback(null, false);
+    } catch (err) {
+      console.error('[CORS] origin check failed:', err);
+      return callback(null, false);
     }
   },
-  credentials: true
+  credentials: true,
+  optionsSuccessStatus: 204,
 }));
 
 app.use(express.json());
