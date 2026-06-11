@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import prisma from './prisma.js';
+import { fileURLToPath } from 'url';
 
 const CUSTOMER_EMAIL = process.env['CUSTOMER_EMAIL'] ?? 'customer@steakz.com';
 const CUSTOMER_PASSWORD = process.env['CUSTOMER_PASSWORD'] ?? 'customer123';
@@ -34,14 +35,25 @@ export async function seed() {
     }
 
     if (!branch) {
-      branch = await prisma.branch.create({
-        data: {
-          name: branchData.name,
-          address: branchData.address,
-          phone: branchData.phone,
-        },
-      });
-      console.log(`[Seeder] Branch created: ${branch.name}`);
+      try {
+        branch = await prisma.branch.create({
+          data: {
+            name: branchData.name,
+            address: branchData.address,
+            phone: branchData.phone,
+          },
+        });
+        console.log(`[Seeder] Branch created: ${branch.name}`);
+      } catch (err) {
+        console.error('[Seeder] Error creating branch, attempting to recover:', err instanceof Error ? err.message : err);
+        // Try to recover by re-querying an existing branch by either name or oldName
+        branch = await prisma.branch.findFirst({ where: { OR: [{ name: branchData.name }, { name: branchData.oldName }] } });
+        if (branch) {
+          console.log(`[Seeder] Recovered existing branch: ${branch.name}`);
+        } else {
+          throw err;
+        }
+      }
     } else if (branch.name !== branchData.name || branch.address !== branchData.address || branch.phone !== branchData.phone) {
       branch = await prisma.branch.update({
         where: { id: branch.id },
@@ -74,15 +86,14 @@ export async function seed() {
     }
 
     const existingItems = await prisma.menuItem.count({ where: { branchId: branch.id } });
-    if (existingItems === 0) {
-      await prisma.menuItem.createMany({
-        data: MENU_ITEMS.map((item) => ({
-          ...item,
-          branchId: branch!.id,
-        })),
-      });
-      console.log(`[Seeder] Added sample menu to ${branch.name}`);
-    }
+      // Ensure each sample menu item exists for the branch; create only missing items.
+      for (const item of MENU_ITEMS) {
+        const itemExists = await prisma.menuItem.findFirst({ where: { name: item.name, branchId: branch.id } });
+        if (!itemExists) {
+          await prisma.menuItem.create({ data: { ...item, branchId: branch.id } });
+          console.log(`[Seeder] Added menu item ${item.name} to ${branch.name}`);
+        }
+      }
   }
 
   // STEP 2: Securely seed the Admin using the guaranteed branch ID
@@ -125,4 +136,23 @@ export async function seed() {
   } else {
     console.log('[Seeder] Customer already exists — skipping.');
   }
+}
+
+// If this file is executed directly (node ./src/lib/seed.ts or node ./dist/lib/seed.js), run the seeder.
+try {
+  const entryScript = process.argv[1];
+  if (entryScript && fileURLToPath(import.meta.url) === entryScript) {
+    seed()
+      .then(() => {
+        console.log('[Seeder] Seed completed successfully.');
+        process.exit(0);
+      })
+      .catch((err) => {
+        console.error('[Seeder] Fatal error:', err);
+        process.exit(1);
+      });
+  }
+} catch (err) {
+  // Defensive: log any synchronous check errors and continue
+  console.error('[Seeder] Invocation check failed:', err);
 }
