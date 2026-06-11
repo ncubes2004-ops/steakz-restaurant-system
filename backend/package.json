@@ -4,9 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon --exec tsx src/index.ts",
-    "build": "tsc && prisma generate && prisma db push && node ./dist/lib/seed.js",
+    "build": "tsc && npx prisma generate && npx prisma db push && npx tsx src/lib/seed.ts",
     "start": "node dist/index.js",
-    "postinstall": "prisma generate"
+    "postinstall": "npx prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -28,6 +28,6 @@
     "typescript": "^6.0.2"
   },
   "prisma": {
-    "seed": "node ./dist/lib/seed.js"
+    "seed": "npx tsx src/lib/seed.ts"
   }
 }
