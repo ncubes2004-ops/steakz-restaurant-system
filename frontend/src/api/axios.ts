@@ -3,8 +3,9 @@ import axios from 'axios';
 // Looks for a Vercel environment flag first; defaults to your local port if missing
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
 
+// Prefix with /api because backend mounts routes under /api
 export const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: 'https://steakz-api-kz10.onrender.com',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -13,7 +14,7 @@ export const api = axios.create({
 
 // Automatically attaches your JWT token from localStorage to headers for secure requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('steakz_token');
   if (token && config.headers) {
     // eslint-disable-next-line no-param-reassign
     config.headers.Authorization = `Bearer ${token}`;
