@@ -27,6 +27,6 @@
     "typescript": "^6.0.2"
   },
   "prisma": {
-    "seed": "tsx src/seed.ts"
+    "seed": "node dist/seed.js"
   }
 }
