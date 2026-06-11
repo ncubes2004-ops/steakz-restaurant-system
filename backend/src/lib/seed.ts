@@ -24,36 +24,9 @@ const MENU_ITEMS = [
 ];
 
 export async function seed() {
-  const email    = process.env['ADMIN_EMAIL']    ?? 'admin@steakz.com';
-  const password = process.env['ADMIN_PASSWORD'] ?? 'admin123';
+  let firstBranchId: number | null = null;
 
-  const existingAdmin = await prisma.user.findUnique({ where: { email } });
-  if (!existingAdmin) {
-    const hashed = await bcrypt.hash(password, 10);
-    await prisma.user.create({
-      data: { name: 'System Admin', email, password: hashed, role: 'ADMIN' },
-    });
-    console.log(`[Seeder] Admin created: ${email}`);
-  } else {
-    console.log('[Seeder] Admin already exists — skipping.');
-  }
-
-  const existingCustomer = await prisma.user.findUnique({ where: { email: CUSTOMER_EMAIL } });
-  if (!existingCustomer) {
-    const hashedCustomer = await bcrypt.hash(CUSTOMER_PASSWORD, 10);
-    await prisma.user.create({
-      data: {
-        name: 'Test Customer',
-        email: CUSTOMER_EMAIL,
-        password: hashedCustomer,
-        role: 'CUSTOMER',
-      },
-    });
-    console.log(`[Seeder] Customer created: ${CUSTOMER_EMAIL}`);
-  } else {
-    console.log('[Seeder] Customer already exists — skipping.');
-  }
-
+  // STEP 1: Always seed branches first so we have IDs to link users to!
   for (const branchData of BRANCHES) {
     let branch = await prisma.branch.findUnique({ where: { name: branchData.name } });
     if (!branch && branchData.oldName) {
@@ -79,6 +52,11 @@ export async function seed() {
         },
       });
       console.log(`[Seeder] Branch renamed/updated: ${branch.name}`);
+    }
+
+    // Capture the very first branch ID to use as a structural fallback for the admin
+    if (!firstBranchId) {
+      firstBranchId = branch.id;
     }
 
     const tableCount = 3 + Math.floor(Math.random() * 3);
@@ -107,4 +85,44 @@ export async function seed() {
     }
   }
 
+  // STEP 2: Securely seed the Admin using the guaranteed branch ID
+  const email    = process.env['ADMIN_EMAIL']    ?? 'admin@steakz.com';
+  const password = process.env['ADMIN_PASSWORD'] ?? 'admin123';
+
+  const existingAdmin = await prisma.user.findUnique({ where: { email } });
+  if (!existingAdmin) {
+    const hashed = await bcrypt.hash(password, 10);
+    await prisma.user.create({
+      data: { 
+        name: 'System Admin', 
+        email, 
+        password: hashed, 
+        role: 'ADMIN',
+        isActive: true,
+        branchId: firstBranchId ?? 1 // Bypasses the strict database constraint cleanly!
+      },
+    });
+    console.log(`[Seeder] Admin created successfully: ${email}`);
+  } else {
+    console.log('[Seeder] Admin already exists — skipping.');
+  }
+
+  // STEP 3: Seed the Test Customer
+  const existingCustomer = await prisma.user.findUnique({ where: { email: CUSTOMER_EMAIL } });
+  if (!existingCustomer) {
+    const hashedCustomer = await bcrypt.hash(CUSTOMER_PASSWORD, 10);
+    await prisma.user.create({
+      data: {
+        name: 'Test Customer',
+        email: CUSTOMER_EMAIL,
+        password: hashedCustomer,
+        role: 'CUSTOMER',
+        isActive: true,
+        branchId: firstBranchId ?? 1
+      },
+    });
+    console.log(`[Seeder] Customer created: ${CUSTOMER_EMAIL}`);
+  } else {
+    console.log('[Seeder] Customer already exists — skipping.');
+  }
 }
