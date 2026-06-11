@@ -1,11 +1,8 @@
 import axios from 'axios';
 
-// Looks for a Vercel environment flag first; defaults to your local port if missing
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
-
 // Prefix with /api because backend mounts routes under /api
 export const api = axios.create({
-  baseURL: 'https://steakz-api-kz10.onrender.com',
+  baseURL: 'https://steakz-api-kz10.onrender.com/api', // 👈 Added /api to the end here
   headers: {
     'Content-Type': 'application/json',
   },
