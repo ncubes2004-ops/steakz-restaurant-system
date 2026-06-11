@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "nodemon --exec tsx src/index.ts",
     "build": "tsc",
-    "start": "npx prisma migrate deploy && npx prisma db seed && node dist/index.js"
+    "start": "npx prisma db push && npx prisma db seed && node dist/index.js"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
